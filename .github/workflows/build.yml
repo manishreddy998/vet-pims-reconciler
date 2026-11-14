@@ -1,0 +1,35 @@
+name: build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: make setup
+      - run: make all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: |
+            reports/reconciliation_report.html
+            llm_context/
+
+  postgres:
+    # the same dbt project, run against Postgres to prove the SQL is portable
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: {POSTGRES_PASSWORD: postgres, POSTGRES_DB: analytics}
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env: {PGHOST: localhost, PGPORT: "5432", PGUSER: postgres, PGPASSWORD: postgres, PGDATABASE: analytics, DBT_TARGET: postgres, DBT_PROFILES_DIR: .}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: make setup && .venv/bin/pip install -q dbt-postgres
+      - run: .venv/bin/python scripts/generate.py && .venv/bin/python scripts/load.py --target postgres
+      - run: .venv/bin/dbt seed && .venv/bin/dbt build
