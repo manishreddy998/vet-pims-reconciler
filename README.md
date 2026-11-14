@@ -1,5 +1,7 @@
 # vet-pims-reconciler
 
+[![build](https://github.com/manishreddy998/vet-pims-reconciler/actions/workflows/build.yml/badge.svg)](https://github.com/manishreddy998/vet-pims-reconciler/actions/workflows/build.yml)
+
 **One trustworthy definition of "appointment", "invoice" and "patient" across veterinary practice-management systems.**
 
 A wellness-plan company ingests data from many clinics. Each clinic runs a practice-management system (PIMS), and each PIMS describes the same visit in its own shape: different IDs, clocks, status codes, tax rules and item codes. Clinics switch systems. Feeds stop. Pet owners spell things differently in your app than at the front desk. Ask three teams how many visits happened last month and you get three numbers.
@@ -66,7 +68,7 @@ From a run on Nov 14, 2026. The generator is seeded but dates are relative to th
 - **96.9%** of plan pets matched to a clinic record. The other 50 are enrolled but never registered at the clinic, and are listed in the queue.
 - **765 review items**, by severity: 106 high (e.g. 16 active memberships billing for pets the PIMS marks deceased, 39 pets registered at a different clinic than the app says), 228 medium, 112 low, 319 info.
 - **96 dbt tests pass.** The 1 warning is deliberate: one AllyDVM feed was made to stop 3 days ago, and the build catches it.
-- The same project runs on **DuckDB and Postgres** with identical results (same animal count, visit count, issue count and revenue to the cent).
+- The same project runs on **DuckDB and Postgres** with identical results (same animal count, visit count, issue count and revenue to the cent). GitHub Actions runs both on every push.
 - At 10x scale (about 1M raw rows) the full dbt build takes 13 seconds on a laptop.
 
 ## For the AI tools
