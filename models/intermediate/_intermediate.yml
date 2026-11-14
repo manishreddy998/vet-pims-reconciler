@@ -1,0 +1,26 @@
+version: 2
+models:
+  - name: int_patient_matches
+    description: >
+      Entity resolution between app pets and PIMS patient records. Rules, highest confidence first:
+      email_and_pet_name (0.99), phone_and_pet_name (0.96), contact_and_similar_pet_name (0.90, edit distance <= 2),
+      owner_surname_pet_name_and_dob (0.85), contact_and_pet_name_other_clinic (0.75, flagged).
+      One PIMS record can belong to only one pet, and a pet gets at most one record per practice.
+    columns:
+      - name: patient_source_key
+        data_tests: [unique]
+  - name: int_patient_xref
+    description: "Every PIMS patient record mapped to exactly one golden_patient_id, including twins across a PIMS migration."
+    columns:
+      - name: patient_source_key
+        data_tests: [unique, not_null]
+      - name: golden_patient_id
+        data_tests: [not_null]
+  - name: int_appointments
+    description: "All appointments on one clock and one status vocabulary, with the system-of-record decision and the reason a record was excluded."
+    columns:
+      - name: appointment_id
+        data_tests: [unique, not_null]
+      - name: canonical_status
+        description: "Null here means a raw status nobody mapped yet."
+        data_tests: [not_null]

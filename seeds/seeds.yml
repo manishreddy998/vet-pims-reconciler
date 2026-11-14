@@ -1,0 +1,16 @@
+version: 2
+seeds:
+  - name: appointment_status_map
+    description: "Maps every raw PIMS appointment status to one canonical status. This is where 'what counts as a visit' is decided."
+    config: {column_types: {pims: varchar, raw_status: varchar, canonical_status: varchar}}
+    columns:
+      - name: canonical_status
+        data_tests: [{accepted_values: {arguments: {values: [scheduled, checked_in, completed, no_show, cancelled]}}}]
+  - name: service_catalog
+    description: "Maps PIMS item codes and SKUs to one canonical service. New codes that are not here show up in rpt_reconciliation_issues as unmapped_item_code."
+    config: {column_types: {pims: varchar, item_code: varchar}}
+  - name: plan_coverage
+    description: "Which canonical services each wellness plan covers, with an optional per-year limit (blank = unlimited)."
+    config: {column_types: {annual_limit: integer}}
+  - name: plans
+    description: "Wellness plan tiers."

@@ -1,0 +1,46 @@
+name: vet_pims_reconciler
+version: "1.0.0"
+config-version: 2
+profile: vet_pims_reconciler
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+on-run-start:
+  # levenshtein() lives in the fuzzystrmatch extension on Postgres
+  - "{% if target.type == 'postgres' %}do $$ begin create extension if not exists fuzzystrmatch; exception when others then raise notice 'fuzzystrmatch not available'; end $$;{% endif %}"
+
+vars:
+  # appointments still "booked" this long after their start time are treated as unresolved, not as visits
+  stale_booking_hours: 48
+  # a practice feed older than this is flagged as stale
+  feed_stale_hours: 30
+  # invoice math tolerance in cents before we call it a mismatch
+  invoice_tolerance_cents: 2
+
+models:
+  vet_pims_reconciler:
+    +persist_docs: {relation: true, columns: true}
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: intermediate
+      +materialized: table
+    marts:
+      +schema: marts
+      +materialized: table
+      metrics:
+        +schema: metrics
+        +materialized: view
+    reports:
+      +schema: reports
+      +materialized: table
+
+seeds:
+  vet_pims_reconciler:
+    +schema: reference

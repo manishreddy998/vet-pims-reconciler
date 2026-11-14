@@ -1,0 +1,77 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PIMS Reconciliation Report</title>
+<style>
+:root { --bg:#fbfaf7; --card:#fff; --ink:#1d1b16; --muted:#6b665c; --line:#e7e2d8; --accent:#2f6f5e; --b2:#d9cfbd; --b3:#c9884f; --b4:#2f6f5e; --hot:#b4472f; }
+@media (prefers-color-scheme: dark) { :root { --bg:#14130f; --card:#1d1b16; --ink:#eeeae1; --muted:#a39d90; --line:#34302a; --accent:#6fbfa6; --b2:#4a4439; --b3:#c9884f; --b4:#6fbfa6; --hot:#e07a5f; } }
+* { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif }
+main { max-width:1040px; margin:0 auto; padding:32px 16px 64px }
+h1 { font-size:28px; margin:0 0 4px; letter-spacing:-.01em } h2 { font-size:18px; margin:36px 0 10px }
+.sub { color:var(--muted); margin:0 0 24px }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px }
+.kpi { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px }
+.kpi b { display:block; font-size:24px; font-variant-numeric:tabular-nums } .kpi span { color:var(--muted); font-size:13px }
+.card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; overflow-x:auto }
+table { border-collapse:collapse; width:100%; font-size:14px } th,td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top }
+th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em }
+td.n { text-align:right; font-variant-numeric:tabular-nums }
+.brow { display:grid; grid-template-columns:78px 1fr 52px; gap:10px; align-items:center; margin:6px 0 }
+.blabel { color:var(--muted); font-size:13px } .bars { display:flex; flex-direction:column; gap:2px }
+.bar { height:14px; border-radius:3px; position:relative; min-width:2px } .bar span { position:absolute; left:calc(100% + 6px); top:-2px; font-size:11px; color:var(--muted); white-space:nowrap }
+.b2 { background:var(--b2) } .b3 { background:var(--b3) } .b4 { background:var(--b4) }
+.bdelta { font-size:13px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums } .bdelta.hot { color:var(--hot); font-weight:700 }
+.legend { display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--muted); margin-bottom:8px } .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px }
+.pill { display:inline-block; padding:1px 8px; border-radius:99px; font-size:12px; font-weight:600 }
+.sev-high { background:#f6dcd4; color:#8a2e1a } .sev-med { background:#f5e7cf; color:#7a4d10 } .sev-low { background:#e3ecf2; color:#2a4d66 } .sev-info { background:#ebe8e1; color:#5b564c }
+.note { color:var(--muted); font-size:13px; margin-top:8px }
+@media (max-width:640px) { .brow { grid-template-columns:60px 1fr 44px } }
+</style></head><body><main>
+<h1>PIMS reconciliation report</h1>
+<p class="sub">Two practice-management systems and the plan app, reconciled into one set of definitions. Synthetic data, generated Nov 14, 2026. dbt build: all tests pass, 1 intended warning (stale feed).</p>
+<div class="kpis">
+ <div class="kpi"><b>103,241</b><span>raw rows landed from 3 sources</span></div>
+ <div class="kpi"><b>3,941 → 3,473</b><span>PIMS patient records → real animals</span></div>
+ <div class="kpi"><b>96.9%</b><span>of plan pets matched to a clinic record (1,546 of 1,596)</span></div>
+ <div class="kpi"><b>40,309 → 8,466</b><span>appointment export rows → counted visits</span></div>
+</div>
+
+<h2>One question, four answers: how many visits did we have?</h2>
+<div class="card">
+<div class="legend"><span><i style="background:var(--b2)"></i>every appointment, any status</span><span><i style="background:var(--b3)"></i>"completed" in both systems added up</span><span><i style="background:var(--b4)"></i>canonical visits (one system of record)</span><span>% = overcount of the orange answer</span></div>
+<div class="brow"><div class="blabel">Nov 2025</div><div class="bars"><div class="bar b2" style="width:20.1%"><span>777</span></div><div class="bar b3" style="width:16.6%"><span>641</span></div><div class="bar b4" style="width:16.6%"><span>641</span></div></div><div class="bdelta">0%</div></div>
+<div class="brow"><div class="blabel">Dec 2025</div><div class="bars"><div class="bar b2" style="width:22.4%"><span>865</span></div><div class="bar b3" style="width:18.3%"><span>705</span></div><div class="bar b4" style="width:18.3%"><span>705</span></div></div><div class="bdelta">0%</div></div>
+<div class="brow"><div class="blabel">Jan 2026</div><div class="bars"><div class="bar b2" style="width:20.8%"><span>802</span></div><div class="bar b3" style="width:17.5%"><span>676</span></div><div class="bar b4" style="width:17.5%"><span>676</span></div></div><div class="bdelta">0%</div></div>
+<div class="brow"><div class="blabel">Feb 2026</div><div class="bars"><div class="bar b2" style="width:19.0%"><span>734</span></div><div class="bar b3" style="width:16.1%"><span>620</span></div><div class="bar b4" style="width:16.1%"><span>620</span></div></div><div class="bdelta">0%</div></div>
+<div class="brow"><div class="blabel">Mar 2026</div><div class="bars"><div class="bar b2" style="width:23.9%"><span>923</span></div><div class="bar b3" style="width:19.6%"><span>755</span></div><div class="bar b4" style="width:18.1%"><span>700</span></div></div><div class="bdelta hot">+8%</div></div>
+<div class="brow"><div class="blabel">Apr 2026</div><div class="bars"><div class="bar b2" style="width:23.1%"><span>892</span></div><div class="bar b3" style="width:19.0%"><span>733</span></div><div class="bar b4" style="width:16.5%"><span>636</span></div></div><div class="bdelta hot">+15%</div></div>
+<div class="brow"><div class="blabel">May 2026</div><div class="bars"><div class="bar b2" style="width:26.0%"><span>1,003</span></div><div class="bar b3" style="width:21.1%"><span>815</span></div><div class="bar b4" style="width:18.1%"><span>699</span></div></div><div class="bdelta hot">+17%</div></div>
+<div class="brow"><div class="blabel">Jun 2026</div><div class="bars"><div class="bar b2" style="width:21.7%"><span>837</span></div><div class="bar b3" style="width:17.2%"><span>663</span></div><div class="bar b4" style="width:17.2%"><span>663</span></div></div><div class="bdelta">0%</div></div>
+<div class="brow"><div class="blabel">Jul 2026</div><div class="bars"><div class="bar b2" style="width:23.0%"><span>887</span></div><div class="bar b3" style="width:18.6%"><span>719</span></div><div class="bar b4" style="width:18.6%"><span>719</span></div></div><div class="bdelta">0%</div></div>
+<div class="brow"><div class="blabel">Aug 2026</div><div class="bars"><div class="bar b2" style="width:22.8%"><span>880</span></div><div class="bar b3" style="width:19.4%"><span>748</span></div><div class="bar b4" style="width:19.4%"><span>748</span></div></div><div class="bdelta">0%</div></div>
+<div class="brow"><div class="blabel">Sep 2026</div><div class="bars"><div class="bar b2" style="width:21.4%"><span>826</span></div><div class="bar b3" style="width:18.3%"><span>705</span></div><div class="bar b4" style="width:18.3%"><span>705</span></div></div><div class="bdelta">0%</div></div>
+<div class="brow"><div class="blabel">Oct 2026</div><div class="bars"><div class="bar b2" style="width:20.4%"><span>789</span></div><div class="bar b3" style="width:17.1%"><span>660</span></div><div class="bar b4" style="width:17.1%"><span>660</span></div></div><div class="bdelta">0%</div></div>
+<p class="note">Raw export rows alone would say 2,458 for the last month, because every extract re-sends every appointment. The orange bars jump in the months before Maple Grove switched from Cornerstone to AllyDVM on 2026-06-01: the new system imported that history, so adding both systems counts those visits twice. The canonical model keeps one system of record per clinic per date.</p>
+</div>
+
+<h2>How animals were matched</h2>
+<div class="card"><table><tr><th>Rule</th><th class="n">Animals</th></tr>
+<tr><td>pims-only patient (not on a plan)</td><td class="n">1,877</td></tr><tr><td>email_and_pet_name</td><td class="n">1,343</td></tr><tr><td>phone_and_pet_name</td><td class="n">121</td></tr><tr><td>not_found_in_pims</td><td class="n">50</td></tr><tr><td>contact_and_similar_pet_name</td><td class="n">43</td></tr><tr><td>contact_and_pet_name_other_clinic</td><td class="n">39</td></tr>
+</table><p class="note">Rules are explicit and ranked (email + pet name 0.99, phone + pet name 0.96, contact + similar name 0.90, surname + name + birth date 0.85, other clinic 0.75). A clinic that changed PIMS has the same animal in both systems: those twins are linked, so the animal keeps one id.</p></div>
+
+<h2>Review queue</h2>
+<div class="card"><table><tr><th>Severity</th><th>Issue</th><th class="n">Count</th></tr>
+<tr><td><span class="pill sev-high">high</span></td><td>plan pet not found in pims</td><td class="n">50</td></tr><tr><td><span class="pill sev-high">high</span></td><td>plan pet registered at other clinic</td><td class="n">39</td></tr><tr><td><span class="pill sev-high">high</span></td><td>active membership for deceased pet</td><td class="n">16</td></tr><tr><td><span class="pill sev-high">high</span></td><td>stale feed</td><td class="n">1</td></tr><tr><td><span class="pill sev-med">medium</span></td><td>invoice math mismatch</td><td class="n">181</td></tr><tr><td><span class="pill sev-med">medium</span></td><td>low confidence match</td><td class="n">43</td></tr><tr><td><span class="pill sev-med">medium</span></td><td>unresolved past booking</td><td class="n">3</td></tr><tr><td><span class="pill sev-med">medium</span></td><td>unmapped item code</td><td class="n">1</td></tr><tr><td><span class="pill sev-low">low</span></td><td>orphaned booking after pims migration</td><td class="n">82</td></tr><tr><td><span class="pill sev-low">low</span></td><td>completed visit without invoice</td><td class="n">30</td></tr><tr><td><span class="pill sev-info">info</span></td><td>superseded imported history</td><td class="n">319</td></tr>
+</table></div>
+<div class="card" style="margin-top:10px"><table><tr><th>Severity</th><th>Example</th><th>Clinic</th><th>Detail</th></tr>
+<tr><td><span class="pill sev-high">high</span></td><td>plan pet not found in pims</td><td>Maple Grove Animal Clinic</td><td>Pet &quot;Loki&quot; is enrolled in a plan but has no patient record at its clinic</td></tr><tr><td><span class="pill sev-high">high</span></td><td>plan pet registered at other clinic</td><td>Harbor Paws Veterinary</td><td>Matched by owner contact and pet name, but the PIMS record is at a different clinic than the app says</td></tr><tr><td><span class="pill sev-high">high</span></td><td>active membership for deceased pet</td><td>Maple Grove Animal Clinic</td><td>PIMS marks the pet deceased but the membership is still active and billing</td></tr><tr><td><span class="pill sev-high">high</span></td><td>stale feed</td><td>Harbor Paws Veterinary</td><td>allydvm feed for Harbor Paws Veterinary last updated 73.5 hours ago</td></tr><tr><td><span class="pill sev-med">medium</span></td><td>low confidence match</td><td>Riverbend Animal Hospital</td><td>Matched with rule contact_and_similar_pet_name at confidence 0.90</td></tr><tr><td><span class="pill sev-med">medium</span></td><td>unresolved past booking</td><td>Harbor Paws Veterinary</td><td>Still &quot;Booked&quot; more than 48h after its start time</td></tr><tr><td><span class="pill sev-med">medium</span></td><td>invoice math mismatch</td><td>Summit Vet Care</td><td>Reported total is off from lines + tax by 199 cents</td></tr><tr><td><span class="pill sev-med">medium</span></td><td>unmapped item code</td><td>Riverbend Animal Hospital</td><td>449 invoice lines use code L-4DXP (&quot;HEARTWORM TEST&quot;), which is not in the service catalog</td></tr>
+</table></div>
+
+<h2>Feed freshness</h2>
+<div class="card"><table><tr><th>Clinic</th><th>PIMS</th><th>Practice</th><th>Current feed</th><th class="n">Hours since update</th><th>Status</th></tr>
+<tr><td>Harbor Paws Veterinary</td><td>allydvm</td><td>AD-91c2</td><td>yes</td><td class="n">73.5</td><td><span class="pill sev-high">stale</span></td></tr><tr><td>Lakeside Pet Clinic</td><td>cornerstone</td><td>CS-3307</td><td>yes</td><td class="n">3.3</td><td>ok</td></tr><tr><td>Maple Grove Animal Clinic</td><td>cornerstone</td><td>CS-4418</td><td>retired</td><td class="n">3.3</td><td>ok</td></tr><tr><td>Maple Grove Animal Clinic</td><td>allydvm</td><td>AD-c6e0</td><td>yes</td><td class="n">0.5</td><td>ok</td></tr><tr><td>Oak Street Veterinary</td><td>cornerstone</td><td>CS-2210</td><td>yes</td><td class="n">3.3</td><td>ok</td></tr><tr><td>Riverbend Animal Hospital</td><td>cornerstone</td><td>CS-1041</td><td>yes</td><td class="n">3.3</td><td>ok</td></tr><tr><td>Summit Vet Care</td><td>allydvm</td><td>AD-7f3a</td><td>yes</td><td class="n">0.3</td><td>ok</td></tr>
+</table><p class="note">A stopped feed looks exactly like a clinic having a quiet week. This check runs on every build.</p></div>
+
+<h2>Plan economics, last 6 full months</h2>
+<div class="card"><table><tr><th>Plan</th><th class="n">Membership-months</th><th class="n">Dues collected ($)</th><th class="n">Covered care ($)</th><th class="n">Care / dues</th></tr>
+<tr><td>ESSENTIAL</td><td class="n">3,440</td><td class="n">119,880</td><td class="n">111,417</td><td class="n">0.93</td></tr><tr><td>PLUS</td><td class="n">2,904</td><td class="n">158,825</td><td class="n">123,283</td><td class="n">0.78</td></tr><tr><td>COMPLETE</td><td class="n">1,259</td><td class="n">102,066</td><td class="n">70,022</td><td class="n">0.69</td></tr>
+</table><p class="note">Covered care respects yearly limits per service (266 lines were over a plan limit and are not counted as covered). Numbers are synthetic; the point is that they are computed from one definition.</p></div>
+</main></body></html>

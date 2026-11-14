@@ -1,0 +1,10 @@
+.venv/
+target/
+logs/
+dbt_packages/
+warehouse.duckdb*
+data/raw/*
+!data/raw/.gitkeep
+.DS_Store
+__pycache__/
+.user.yml

@@ -1,0 +1,10 @@
+pims,raw_status,canonical_status,description
+cornerstone,S,scheduled,Scheduled
+cornerstone,I,checked_in,Checked in (visit in progress at extract time)
+cornerstone,C,completed,Checked out
+cornerstone,N,no_show,No show
+cornerstone,X,cancelled,Cancelled
+allydvm,Booked,scheduled,Booked
+allydvm,Completed,completed,Completed
+allydvm,NoShow,no_show,No show
+allydvm,Cancelled,cancelled,Cancelled

@@ -1,0 +1,28 @@
+version: 2
+models:
+  - name: stg_cornerstone__appointments
+    description: "Latest extract of each Cornerstone appointment. n_versions shows how many times it was re-exported."
+    columns:
+      - name: appointment_source_key
+        data_tests: [unique, not_null]
+  - name: stg_allydvm__appointments
+    description: "Latest version of each AllyDVM appointment (by updatedAt). start_utc is UTC."
+    columns:
+      - name: appointment_source_key
+        data_tests: [unique, not_null]
+  - name: stg_cornerstone__invoices
+    columns:
+      - name: invoice_source_key
+        data_tests: [unique, not_null]
+  - name: stg_allydvm__invoices
+    columns:
+      - name: invoice_source_key
+        data_tests: [unique, not_null]
+  - name: stg_app__pets
+    columns:
+      - name: pet_id
+        data_tests: [unique, not_null]
+  - name: stg_app__memberships
+    columns:
+      - name: membership_id
+        data_tests: [unique, not_null]

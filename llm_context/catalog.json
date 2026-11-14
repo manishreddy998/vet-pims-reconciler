@@ -1,0 +1,838 @@
+{
+  "rules": [
+    "Only query the tables listed here. Never query raw_* or staging schemas.",
+    "Count animals with golden_patient_id, never with PIMS patient ids.",
+    "Bucket dates with local_date / invoice_local_date (clinic clock), not UTC.",
+    "Money columns ending in _cents are integers in cents. Divide by 100 for dollars.",
+    "Read-only. Add a LIMIT to exploratory queries."
+  ],
+  "glossary": {
+    "appointment": "A booking for a patient at a clinic, from the PIMS that was that clinic's system of record on that date. Table: fct_appointment.",
+    "visit": "An appointment that happened: fct_appointment.is_visit (status completed). Count visits by local_date, never by UTC date.",
+    "patient": "A real animal: dim_patient.golden_patient_id. One animal can have several PIMS records; never count PIMS patient ids.",
+    "plan pet": "A patient enrolled in a wellness plan: dim_patient.is_plan_pet.",
+    "covered care": "Invoice lines the pet's plan paid for, within yearly limits: fct_invoice_line.is_plan_covered.",
+    "care to dues ratio": "Covered care value divided by dues collected. Above 1.0 means the plan paid out more than it collected.",
+    "net / gross": "net_cents is before tax, gross_cents includes tax. Revenue questions use net unless asked otherwise."
+  },
+  "tables": [
+    {
+      "table": "marts.dim_clinic",
+      "grain": "one row per clinic",
+      "description": "One row per clinic, with the PIMS it runs today and whether it ever switched PIMS.",
+      "row_count": 6,
+      "upstream": [
+        "stg_app__clinics",
+        "int_practices"
+      ],
+      "columns": [
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "clinic_name",
+          "type": "VARCHAR",
+          "description": "Clinic name."
+        },
+        {
+          "name": "clinic_timezone",
+          "type": "VARCHAR",
+          "description": "IANA time zone of the clinic."
+        },
+        {
+          "name": "sales_tax_rate",
+          "type": "DECIMAL(6,4)",
+          "description": "Sales tax rate applied at the clinic."
+        },
+        {
+          "name": "onboarded_on",
+          "type": "DATE",
+          "description": ""
+        },
+        {
+          "name": "current_pims",
+          "type": "VARCHAR",
+          "description": "PIMS the clinic runs today."
+        },
+        {
+          "name": "current_practice_id",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "switched_pims",
+          "type": "BOOLEAN",
+          "description": "True if the clinic changed PIMS during the data window."
+        },
+        {
+          "name": "current_pims_since",
+          "type": "DATE",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "table": "marts.dim_member",
+      "grain": "one row per plan member",
+      "description": "One row per plan member (pet owner) from the app.",
+      "row_count": 1414,
+      "upstream": [
+        "stg_app__members"
+      ],
+      "columns": [
+        {
+          "name": "member_id",
+          "type": "VARCHAR",
+          "description": "Plan member (join to marts.dim_member)."
+        },
+        {
+          "name": "first_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "last_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "phone",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "created_at_utc",
+          "type": "TIMESTAMP",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "table": "marts.dim_patient",
+      "grain": "one row per real animal (golden patient)",
+      "description": "The golden patient. One row per real animal, however many PIMS records and app rows describe it. Built by explicit, ranked matching rules (see int_patient_matches) so every link can be explained.",
+      "row_count": 3473,
+      "upstream": [
+        "int_patient_xref",
+        "int_pims_patients",
+        "stg_app__pets"
+      ],
+      "columns": [
+        {
+          "name": "golden_patient_id",
+          "type": "VARCHAR",
+          "description": "Stable id for the animal. Plan pets are keyed on their app pet id, so the id survives a clinic changing PIMS."
+        },
+        {
+          "name": "app_pet_id",
+          "type": "VARCHAR",
+          "description": "App pet id when the animal is on a wellness plan."
+        },
+        {
+          "name": "member_id",
+          "type": "VARCHAR",
+          "description": "Plan member (join to marts.dim_member)."
+        },
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "pims_clinic_id",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "pet_name",
+          "type": "VARCHAR",
+          "description": "Pet name (PIMS spelling when available)."
+        },
+        {
+          "name": "species",
+          "type": "VARCHAR",
+          "description": "dog or cat."
+        },
+        {
+          "name": "breed",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "birth_date",
+          "type": "DATE",
+          "description": ""
+        },
+        {
+          "name": "is_deceased",
+          "type": "BOOLEAN",
+          "description": "PIMS marks the animal deceased."
+        },
+        {
+          "name": "deceased_on",
+          "type": "DATE",
+          "description": ""
+        },
+        {
+          "name": "is_plan_pet",
+          "type": "BOOLEAN",
+          "description": ""
+        },
+        {
+          "name": "match_rule",
+          "type": "VARCHAR",
+          "description": "Which rule linked the app pet to the PIMS record, or not_found_in_pims."
+        },
+        {
+          "name": "match_confidence",
+          "type": "DECIMAL(3,2)",
+          "description": "0.75 to 0.99. Anything under 0.95 goes to the review queue."
+        },
+        {
+          "name": "clinic_mismatch",
+          "type": "BOOLEAN",
+          "description": ""
+        },
+        {
+          "name": "n_pims_records",
+          "type": "BIGINT",
+          "description": "How many PIMS patient records describe this animal (2 for clinics that switched PIMS)."
+        },
+        {
+          "name": "pims_record_keys",
+          "type": "VARCHAR",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "table": "marts.fct_membership",
+      "grain": "one row per plan membership",
+      "description": "One row per wellness plan membership.",
+      "row_count": 1596,
+      "upstream": [
+        "stg_app__memberships",
+        "stg_app__pets",
+        "dim_patient",
+        "plans"
+      ],
+      "columns": [
+        {
+          "name": "membership_id",
+          "type": "VARCHAR",
+          "description": "Plan membership (join to marts.fct_membership)."
+        },
+        {
+          "name": "app_pet_id",
+          "type": "VARCHAR",
+          "description": "Pet id in the plan app."
+        },
+        {
+          "name": "golden_patient_id",
+          "type": "VARCHAR",
+          "description": "The real animal (join to marts.dim_patient)."
+        },
+        {
+          "name": "member_id",
+          "type": "VARCHAR",
+          "description": "Plan member (join to marts.dim_member)."
+        },
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "plan_code",
+          "type": "VARCHAR",
+          "description": "Plan tier: ESSENTIAL, PLUS or COMPLETE."
+        },
+        {
+          "name": "plan_name",
+          "type": "VARCHAR",
+          "description": "Plan tier name."
+        },
+        {
+          "name": "monthly_price_cents",
+          "type": "BIGINT",
+          "description": "Monthly plan price in cents."
+        },
+        {
+          "name": "started_on",
+          "type": "DATE",
+          "description": "Membership start date."
+        },
+        {
+          "name": "cancelled_on",
+          "type": "DATE",
+          "description": "Membership cancellation date."
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN",
+          "description": "Membership not cancelled."
+        },
+        {
+          "name": "is_active_for_deceased_pet",
+          "type": "BOOLEAN",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "table": "marts.fct_appointment",
+      "grain": "one row per appointment in the clinic's system of record",
+      "description": "THE definition of an appointment: a booking for a patient at a clinic, taken from the PIMS that was the clinic's system of record on that date, latest version only, on the clinic's local clock. A visit is an appointment with status completed.",
+      "row_count": 10797,
+      "upstream": [
+        "int_appointments",
+        "int_invoices",
+        "dim_patient"
+      ],
+      "columns": [
+        {
+          "name": "appointment_id",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "golden_patient_id",
+          "type": "VARCHAR",
+          "description": "The real animal (join to marts.dim_patient)."
+        },
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "source_pims",
+          "type": "VARCHAR",
+          "description": "PIMS the record came from: cornerstone or allydvm."
+        },
+        {
+          "name": "appointment_source_key",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "start_utc",
+          "type": "TIMESTAMP",
+          "description": "Appointment start in UTC."
+        },
+        {
+          "name": "start_local",
+          "type": "TIMESTAMP",
+          "description": "Appointment start on the clinic's local clock."
+        },
+        {
+          "name": "local_date",
+          "type": "DATE",
+          "description": "Date on the clinic's own clock. Use this, not the UTC date, for any daily or monthly count."
+        },
+        {
+          "name": "appointment_type",
+          "type": "VARCHAR",
+          "description": "wellness, sick, dental or surgery."
+        },
+        {
+          "name": "duration_minutes",
+          "type": "INTEGER",
+          "description": ""
+        },
+        {
+          "name": "raw_status",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "description": "scheduled, checked_in, completed, no_show, cancelled, or unresolved (still booked well after its start time)."
+        },
+        {
+          "name": "is_visit",
+          "type": "BOOLEAN",
+          "description": "True when the appointment happened (status completed)."
+        },
+        {
+          "name": "is_plan_pet",
+          "type": "BOOLEAN",
+          "description": ""
+        },
+        {
+          "name": "invoice_id",
+          "type": "VARCHAR",
+          "description": "Invoice (join to marts.fct_invoice)."
+        },
+        {
+          "name": "n_source_versions",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "source_updated_at_utc",
+          "type": "TIMESTAMP",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "table": "marts.fct_invoice",
+      "grain": "one row per invoice",
+      "description": "One row per invoice, on one money definition: net before tax, tax, gross.",
+      "row_count": 8561,
+      "upstream": [
+        "int_invoices"
+      ],
+      "columns": [
+        {
+          "name": "invoice_id",
+          "type": "VARCHAR",
+          "description": "Invoice (join to marts.fct_invoice)."
+        },
+        {
+          "name": "invoice_source_key",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "source_pims",
+          "type": "VARCHAR",
+          "description": "PIMS the record came from: cornerstone or allydvm."
+        },
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "golden_patient_id",
+          "type": "VARCHAR",
+          "description": "The real animal (join to marts.dim_patient)."
+        },
+        {
+          "name": "invoice_local_date",
+          "type": "DATE",
+          "description": "Invoice date on the clinic's clock."
+        },
+        {
+          "name": "n_lines",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "net_cents",
+          "type": "HUGEINT",
+          "description": "Amount before tax, in cents."
+        },
+        {
+          "name": "tax_cents",
+          "type": "HUGEINT",
+          "description": "Tax in cents."
+        },
+        {
+          "name": "gross_cents",
+          "type": "HUGEINT",
+          "description": "Amount including tax, in cents."
+        },
+        {
+          "name": "math_gap_cents",
+          "type": "HUGEINT",
+          "description": ""
+        },
+        {
+          "name": "has_math_mismatch",
+          "type": "BOOLEAN",
+          "description": "Reported total does not equal lines plus tax."
+        },
+        {
+          "name": "is_voided",
+          "type": "BOOLEAN",
+          "description": "Voided in the PIMS. Exclude from revenue."
+        }
+      ]
+    },
+    {
+      "table": "marts.fct_invoice_line",
+      "grain": "one row per invoice line",
+      "description": "One row per invoice line with a canonical service and whether the pet's plan covered it (respecting yearly limits).",
+      "row_count": 28388,
+      "upstream": [
+        "stg_cornerstone__invoice_lines",
+        "stg_allydvm__invoice_lines",
+        "int_invoices",
+        "service_catalog",
+        "fct_membership",
+        "plan_coverage"
+      ],
+      "columns": [
+        {
+          "name": "invoice_line_id",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "invoice_id",
+          "type": "VARCHAR",
+          "description": "Invoice (join to marts.fct_invoice)."
+        },
+        {
+          "name": "invoice_line_source_key",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "source_pims",
+          "type": "VARCHAR",
+          "description": "PIMS the record came from: cornerstone or allydvm."
+        },
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "golden_patient_id",
+          "type": "VARCHAR",
+          "description": "The real animal (join to marts.dim_patient)."
+        },
+        {
+          "name": "invoice_local_date",
+          "type": "DATE",
+          "description": "Invoice date on the clinic's clock."
+        },
+        {
+          "name": "item_code",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "item_description",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "quantity",
+          "type": "INTEGER",
+          "description": ""
+        },
+        {
+          "name": "unit_price_cents",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "discount_cents",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "line_net_cents",
+          "type": "BIGINT",
+          "description": "Line amount after discount, before tax, in cents."
+        },
+        {
+          "name": "canonical_service",
+          "type": "VARCHAR",
+          "description": "Service in one vocabulary across PIMS."
+        },
+        {
+          "name": "service_category",
+          "type": "VARCHAR",
+          "description": "Group of the canonical service."
+        },
+        {
+          "name": "is_unmapped_item",
+          "type": "BOOLEAN",
+          "description": ""
+        },
+        {
+          "name": "membership_id",
+          "type": "VARCHAR",
+          "description": "Plan membership (join to marts.fct_membership)."
+        },
+        {
+          "name": "plan_code",
+          "type": "VARCHAR",
+          "description": "Plan tier: ESSENTIAL, PLUS or COMPLETE."
+        },
+        {
+          "name": "membership_year",
+          "type": "INTEGER",
+          "description": ""
+        },
+        {
+          "name": "is_plan_covered",
+          "type": "BOOLEAN",
+          "description": "True when the service is in the member's plan and within its yearly limit, on the invoice date."
+        },
+        {
+          "name": "is_over_plan_limit",
+          "type": "BOOLEAN",
+          "description": ""
+        },
+        {
+          "name": "is_voided",
+          "type": "BOOLEAN",
+          "description": "Voided in the PIMS. Exclude from revenue."
+        }
+      ]
+    },
+    {
+      "table": "marts.fct_membership_month",
+      "grain": "one row per membership per active month",
+      "description": "One row per membership per active month: dues collected, covered care value, uncovered care, visits.",
+      "row_count": 16302,
+      "upstream": [
+        "fct_membership",
+        "stg_app__payments",
+        "fct_invoice_line",
+        "fct_appointment"
+      ],
+      "columns": [
+        {
+          "name": "membership_id",
+          "type": "VARCHAR",
+          "description": "Plan membership (join to marts.fct_membership)."
+        },
+        {
+          "name": "month_start",
+          "type": "DATE",
+          "description": "First day of the month."
+        },
+        {
+          "name": "golden_patient_id",
+          "type": "VARCHAR",
+          "description": "The real animal (join to marts.dim_patient)."
+        },
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "plan_code",
+          "type": "VARCHAR",
+          "description": "Plan tier: ESSENTIAL, PLUS or COMPLETE."
+        },
+        {
+          "name": "monthly_price_cents",
+          "type": "BIGINT",
+          "description": "Monthly plan price in cents."
+        },
+        {
+          "name": "dues_collected_cents",
+          "type": "HUGEINT",
+          "description": "Plan dues collected in the month (refunds negative), in cents."
+        },
+        {
+          "name": "failed_charges",
+          "type": "HUGEINT",
+          "description": ""
+        },
+        {
+          "name": "covered_care_cents",
+          "type": "HUGEINT",
+          "description": "Value of care the plan covered in the month, in cents."
+        },
+        {
+          "name": "uncovered_care_cents",
+          "type": "HUGEINT",
+          "description": ""
+        },
+        {
+          "name": "visits",
+          "type": "BIGINT",
+          "description": "Completed visits."
+        }
+      ]
+    },
+    {
+      "table": "metrics.metric_plan_economics_monthly",
+      "grain": "one row per month per plan",
+      "description": "Approved metric. Plan economics by month and tier. care_to_dues_ratio = covered care value / dues collected.",
+      "row_count": 60,
+      "upstream": [
+        "fct_membership_month"
+      ],
+      "columns": [
+        {
+          "name": "month_start",
+          "type": "DATE",
+          "description": "First day of the month."
+        },
+        {
+          "name": "plan_code",
+          "type": "VARCHAR",
+          "description": "Plan tier: ESSENTIAL, PLUS or COMPLETE."
+        },
+        {
+          "name": "active_memberships",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "dues_collected",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "covered_care_value",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "care_to_dues_ratio",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "visits_per_100_memberships",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "failed_charges",
+          "type": "HUGEINT",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "table": "metrics.metric_clinic_monthly",
+      "grain": "one row per clinic per month",
+      "description": "Approved metric. Clinic scorecard by month on the canonical appointment definition.",
+      "row_count": 78,
+      "upstream": [
+        "fct_appointment",
+        "dim_clinic"
+      ],
+      "columns": [
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "clinic_name",
+          "type": "VARCHAR",
+          "description": "Clinic name."
+        },
+        {
+          "name": "month_start",
+          "type": "DATE",
+          "description": "First day of the month."
+        },
+        {
+          "name": "appointments",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "visits",
+          "type": "HUGEINT",
+          "description": "Completed visits."
+        },
+        {
+          "name": "no_show_rate",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "cancel_rate",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "plan_pet_visit_share",
+          "type": "DOUBLE",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "table": "reports.rpt_reconciliation_issues",
+      "grain": "one row per data issue",
+      "description": "Every decision the pipeline made or could not make, one row per issue, with severity. This is the ops review queue.",
+      "row_count": 765,
+      "upstream": [
+        "dim_patient",
+        "fct_membership",
+        "int_appointments",
+        "int_invoices",
+        "fct_invoice_line",
+        "fct_appointment",
+        "rpt_feed_freshness",
+        "dim_clinic"
+      ],
+      "columns": [
+        {
+          "name": "issue_id",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "issue_type",
+          "type": "VARCHAR",
+          "description": "Kind of data issue."
+        },
+        {
+          "name": "severity",
+          "type": "VARCHAR",
+          "description": "high, medium, low or info."
+        },
+        {
+          "name": "clinic_id",
+          "type": "VARCHAR",
+          "description": "Clinic id (join to marts.dim_clinic)."
+        },
+        {
+          "name": "entity_type",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "entity_key",
+          "type": "VARCHAR",
+          "description": "Source key of the record the issue is about."
+        },
+        {
+          "name": "detail",
+          "type": "VARCHAR",
+          "description": "Human-readable explanation of the issue."
+        },
+        {
+          "name": "clinic_name",
+          "type": "VARCHAR",
+          "description": "Clinic name."
+        }
+      ]
+    }
+  ],
+  "vetted_sql": [
+    {
+      "question": "How many visits did each clinic have last month?",
+      "sql": "select c.clinic_name, count(*) as visits from marts.fct_appointment a join marts.dim_clinic c using (clinic_id) where a.is_visit and a.local_date >= date_trunc('month', current_date) - interval '1 month' and a.local_date < date_trunc('month', current_date) group by 1 order by 2 desc"
+    },
+    {
+      "question": "Which plan tier pays out the most care relative to dues?",
+      "sql": "select plan_code, sum(covered_care_value) / nullif(sum(dues_collected), 0) as care_to_dues_ratio from metrics.metric_plan_economics_monthly group by 1 order by 2 desc"
+    },
+    {
+      "question": "What is the no-show rate by clinic over the last 3 months?",
+      "sql": "select clinic_name, sum(appointments * no_show_rate) / sum(appointments) as no_show_rate from metrics.metric_clinic_monthly where month_start >= date_trunc('month', current_date) - interval '3 month' group by 1 order by 2 desc"
+    },
+    {
+      "question": "Which high-severity data issues need attention?",
+      "sql": "select issue_type, clinic_name, count(*) from reports.rpt_reconciliation_issues where severity = 'high' group by 1, 2 order by 3 desc"
+    }
+  ]
+}

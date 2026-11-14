@@ -1,0 +1,6 @@
+version: 2
+models:
+  - name: fct_membership_month
+    description: "One row per membership per active month: dues collected, covered care value, uncovered care, visits."
+    data_tests:
+      - unique_combination: {arguments: {columns: [membership_id, month_start]}}

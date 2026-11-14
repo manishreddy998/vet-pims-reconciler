@@ -1,0 +1,74 @@
+version: 2
+models:
+  - name: dim_clinic
+    description: "One row per clinic, with the PIMS it runs today and whether it ever switched PIMS."
+    columns:
+      - name: clinic_id
+        data_tests: [unique, not_null]
+      - name: current_pims
+        data_tests: [not_null, {accepted_values: {arguments: {values: [cornerstone, allydvm]}}}]
+  - name: dim_member
+    description: "One row per plan member (pet owner) from the app."
+    columns:
+      - name: member_id
+        data_tests: [unique, not_null]
+  - name: dim_patient
+    description: >
+      The golden patient. One row per real animal, however many PIMS records and app rows describe it.
+      Built by explicit, ranked matching rules (see int_patient_matches) so every link can be explained.
+    columns:
+      - name: golden_patient_id
+        description: "Stable id for the animal. Plan pets are keyed on their app pet id, so the id survives a clinic changing PIMS."
+        data_tests: [unique, not_null]
+      - name: app_pet_id
+        description: "App pet id when the animal is on a wellness plan."
+        data_tests: [{unique: {config: {where: "app_pet_id is not null"}}}]
+      - name: match_rule
+        description: "Which rule linked the app pet to the PIMS record, or not_found_in_pims."
+      - name: match_confidence
+        description: "0.75 to 0.99. Anything under 0.95 goes to the review queue."
+      - name: n_pims_records
+        description: "How many PIMS patient records describe this animal (2 for clinics that switched PIMS)."
+  - name: fct_membership
+    description: "One row per wellness plan membership."
+    columns:
+      - name: membership_id
+        data_tests: [unique, not_null]
+      - name: golden_patient_id
+        data_tests: [not_null, {relationships: {arguments: {to: ref('dim_patient'), field: golden_patient_id}}}]
+      - name: plan_code
+        data_tests: [{relationships: {arguments: {to: ref('plans'), field: plan_code}}}]
+  - name: fct_appointment
+    description: >
+      THE definition of an appointment: a booking for a patient at a clinic, taken from the PIMS that was the clinic's
+      system of record on that date, latest version only, on the clinic's local clock. A visit is an appointment with status completed.
+    columns:
+      - name: appointment_id
+        data_tests: [unique, not_null]
+      - name: golden_patient_id
+        data_tests: [not_null, {relationships: {arguments: {to: ref('dim_patient'), field: golden_patient_id}}}]
+      - name: clinic_id
+        data_tests: [not_null, {relationships: {arguments: {to: ref('dim_clinic'), field: clinic_id}}}]
+      - name: status
+        description: "scheduled, checked_in, completed, no_show, cancelled, or unresolved (still booked well after its start time)."
+        data_tests: [not_null, {accepted_values: {arguments: {values: [scheduled, checked_in, completed, no_show, cancelled, unresolved]}}}]
+      - name: local_date
+        description: "Date on the clinic's own clock. Use this, not the UTC date, for any daily or monthly count."
+      - name: is_visit
+        description: "True when the appointment happened (status completed)."
+  - name: fct_invoice
+    description: "One row per invoice, on one money definition: net before tax, tax, gross."
+    columns:
+      - name: invoice_id
+        data_tests: [unique, not_null]
+      - name: net_cents
+        data_tests: [not_null]
+  - name: fct_invoice_line
+    description: "One row per invoice line with a canonical service and whether the pet's plan covered it (respecting yearly limits)."
+    columns:
+      - name: invoice_line_id
+        data_tests: [unique, not_null]
+      - name: invoice_id
+        data_tests: [{relationships: {arguments: {to: ref('fct_invoice'), field: invoice_id}}}]
+      - name: is_plan_covered
+        description: "True when the service is in the member's plan and within its yearly limit, on the invoice date."

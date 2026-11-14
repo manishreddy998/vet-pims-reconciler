@@ -1,0 +1,15 @@
+version: 2
+models:
+  - name: rpt_reconciliation_issues
+    description: "Every decision the pipeline made or could not make, one row per issue, with severity. This is the ops review queue."
+    columns:
+      - name: issue_id
+        data_tests: [unique, not_null]
+      - name: severity
+        data_tests: [{accepted_values: {arguments: {values: [high, medium, low, info]}}}]
+  - name: rpt_definition_drift
+    description: "The same monthly visit question answered four ways, to show why one definition matters."
+  - name: rpt_feed_freshness
+    description: "Hours since each practice feed last sent data. A stopped feed looks like a clinic with no visits."
+    data_tests:
+      - no_stale_feeds: {config: {severity: warn}}

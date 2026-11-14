@@ -1,0 +1,6 @@
+version: 2
+models:
+  - name: metric_plan_economics_monthly
+    description: "Approved metric. Plan economics by month and tier. care_to_dues_ratio = covered care value / dues collected."
+  - name: metric_clinic_monthly
+    description: "Approved metric. Clinic scorecard by month on the canonical appointment definition."
